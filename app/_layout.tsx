@@ -1,10 +1,19 @@
 import "../global.css";
-import { Stack, useRouter, useSegments, Href } from "expo-router";
+import {
+    Stack,
+    useGlobalSearchParams,
+    usePathname,
+    useRouter,
+    useSegments,
+    Href,
+} from "expo-router";
 import { useFonts } from "expo-font";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
-import { ClerkProvider, useAuth } from "@clerk/expo";
+import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { PostHogProvider } from "posthog-react-native";
+import { posthog } from "@/lib/posthog";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,8 +27,33 @@ if (!publishableKey) {
 
 function InitialLayout() {
     const { isLoaded: isAuthLoaded, isSignedIn } = useAuth();
+    const { user } = useUser();
     const segments = useSegments();
+    const pathname = usePathname();
+    const params = useGlobalSearchParams();
+    const previousPathname = useRef<string | undefined>(undefined);
     const router = useRouter();
+
+    useEffect(() => {
+        if (previousPathname.current === pathname) return;
+
+        posthog?.screen(pathname, {
+            previous_screen: previousPathname.current ?? null,
+            has_route_params: Object.keys(params).length > 0,
+        });
+        previousPathname.current = pathname;
+    }, [pathname, params]);
+
+    useEffect(() => {
+        if (!isSignedIn || !user?.id) return;
+
+        posthog?.identify(user.id, {
+            ...(user.primaryEmailAddress?.emailAddress
+                ? { email: user.primaryEmailAddress.emailAddress }
+                : {}),
+            ...(user.fullName ? { name: user.fullName } : {}),
+        });
+    }, [isSignedIn, user?.id, user?.primaryEmailAddress?.emailAddress, user?.fullName]);
 
     useEffect(() => {
         if (!isAuthLoaded) return;
@@ -69,9 +103,20 @@ export default function RootLayout() {
 
     if (!fontsLoaded) return null;
 
-    return (
+    const app = (
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
             <InitialLayout />
         </ClerkProvider>
+    );
+
+    if (!posthog) return app;
+
+    return (
+        <PostHogProvider
+            client={posthog}
+            autocapture={{ captureScreens: false, captureTouches: true }}
+        >
+            {app}
+        </PostHogProvider>
     );
 }

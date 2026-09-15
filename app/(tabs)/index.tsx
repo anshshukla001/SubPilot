@@ -12,6 +12,7 @@ import {
     HOME_SUBSCRIPTIONS,
 } from "@/constants/data";
 import { formatCurrency } from "@/lib/utils";
+import { posthog } from "@/lib/posthog";
 import ListHeading from "@/components/ListHeading";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
@@ -20,7 +21,13 @@ export default function Index() {
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
 
     const handleSubscriptionPress = (id: string) => {
-        setExpandedSubscriptionId((currentId) => (currentId === id ? null : id));
+        const isExpanded = expandedSubscriptionId !== id;
+
+        setExpandedSubscriptionId(isExpanded ? id : null);
+        posthog?.capture("subscription_details_toggled", {
+            subscription_id: id,
+            is_expanded: isExpanded,
+        });
     };
 
     return (
@@ -39,7 +46,11 @@ export default function Index() {
                                 </Text>
                             </View>
 
-                            <TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => posthog?.capture("add_subscription_started", {
+                                    entry_point: "home_header",
+                                })}
+                            >
                                 <Image source={icons.add} className="home-add-icon" />
                             </TouchableOpacity>
                         </View>
