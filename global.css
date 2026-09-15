@@ -417,4 +417,60 @@
     .category-chip-text-active {
         @apply text-accent;
     }
+
+    .auth-google-button {
+        @apply flex-row items-center justify-center gap-3 rounded-2xl border border-border bg-background py-4;
+    }
+
+    .auth-google-icon {
+        @apply size-5;
+    }
+
+    .auth-google-text {
+        @apply text-base font-sans-semibold text-primary;
+    }
+
+    .auth-verify-icon {
+        @apply mb-4 size-16 items-center justify-center rounded-2xl bg-accent/15;
+    }
+
+    .auth-verify-icon-text {
+        @apply text-3xl;
+    }
+
+    .auth-verify-title {
+        @apply text-2xl font-sans-bold text-primary;
+    }
+
+    .auth-verify-subtitle {
+        @apply mt-2 text-base font-sans-medium text-muted-foreground;
+    }
+
+    .auth-verify-email {
+        @apply font-sans-bold text-primary;
+    }
+
+    .auth-code-input {
+        @apply rounded-2xl border border-border bg-background px-4 py-4 text-center text-2xl font-sans-bold tracking-[12px] text-primary;
+    }
+
+    .auth-resend-row {
+        @apply mt-3 flex-row items-center justify-center gap-1;
+    }
+
+    .auth-resend-text {
+        @apply text-sm font-sans-medium text-muted-foreground;
+    }
+
+    .auth-resend-link {
+        @apply text-sm font-sans-bold text-accent;
+    }
+
+    .auth-password-toggle {
+        @apply absolute right-4 top-4;
+    }
+
+    .auth-password-toggle-text {
+        @apply text-sm font-sans-semibold text-muted-foreground;
+    }
 }
