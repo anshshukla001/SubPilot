@@ -3,6 +3,7 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "@/constants/theme";
 import { images } from "@/constants/images";
+import { posthog } from "@/lib/posthog";
 
 export default function SettingsScreen() {
     const { user } = useUser();
@@ -11,7 +12,12 @@ export default function SettingsScreen() {
     const handleSignOut = async () => {
         try {
             await signOut();
+            posthog?.capture("signed_out");
+            posthog?.reset();
         } catch (error) {
+            posthog?.captureException(new Error("Sign-out failed"), {
+                flow: "sign_out",
+            });
             console.error("Error signing out:", error);
         }
     };

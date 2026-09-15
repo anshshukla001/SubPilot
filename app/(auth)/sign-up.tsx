@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { icons } from "@/constants/icons";
 import { colors } from "@/constants/theme";
+import { posthog } from "@/lib/posthog";
 
 // Warm up the browser for OAuth on Android
 WebBrowser.maybeCompleteAuthSession();
@@ -92,6 +93,10 @@ export default function SignUpScreen() {
             }
 
             setPendingVerification(true);
+            posthog?.capture("sign_up_started", {
+                authentication_method: "password",
+                verification_method: "email_code",
+            });
         } catch (err: unknown) {
             const clerkError = err as { message?: string; errors?: { message?: string }[] };
             const message =
@@ -99,6 +104,10 @@ export default function SignUpScreen() {
                 clerkError.message ||
                 "Could not create account. Please try again.";
             setErrors({ general: message });
+            posthog?.captureException(new Error("Password sign-up failed"), {
+                authentication_method: "password",
+                flow: "sign_up",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -130,7 +139,13 @@ export default function SignUpScreen() {
                 const { error: finalizeError } = await signUp.finalize();
                 if (finalizeError) {
                     setErrors({ general: finalizeError.message || "Could not finalize registration." });
+                    return;
                 }
+
+                posthog?.capture("sign_up_completed", {
+                    authentication_method: "password",
+                    verification_method: "email_code",
+                });
             } else {
                 console.warn(
                     "Sign-up incomplete after code verification:",
@@ -155,6 +170,10 @@ export default function SignUpScreen() {
                 clerkError.message ||
                 "Invalid verification code. Please check and try again.";
             setErrors({ code: message });
+            posthog?.captureException(new Error("Email verification failed"), {
+                authentication_method: "password",
+                flow: "sign_up_verification",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -170,7 +189,13 @@ export default function SignUpScreen() {
             const { error } = await signUp.verifications.sendEmailCode();
             if (error) {
                 setErrors({ general: error.message || "Could not resend code." });
+                return;
             }
+
+            posthog?.capture("verification_code_resent", {
+                flow: "sign_up",
+                verification_method: "email_code",
+            });
         } catch (err: unknown) {
             const clerkError = err as { message?: string; errors?: { message?: string }[] };
             const message =
@@ -178,6 +203,9 @@ export default function SignUpScreen() {
                 clerkError.message ||
                 "Could not resend code. Please try again.";
             setErrors({ general: message });
+            posthog?.captureException(new Error("Verification code resend failed"), {
+                flow: "sign_up_verification",
+            });
         } finally {
             setIsResending(false);
         }
@@ -190,6 +218,9 @@ export default function SignUpScreen() {
         setErrors({});
 
         try {
+            posthog?.capture("google_sign_up_started", {
+                authentication_method: "google",
+            });
             await startSSOFlow({
                 strategy: "oauth_google",
             });
@@ -200,6 +231,10 @@ export default function SignUpScreen() {
                 clerkError.message ||
                 "Could not sign up with Google. Please try again.";
             setErrors({ general: message });
+            posthog?.captureException(new Error("Google sign-up failed"), {
+                authentication_method: "google",
+                flow: "sign_up",
+            });
         } finally {
             setIsGoogleLoading(false);
         }

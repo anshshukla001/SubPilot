@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { icons } from "@/constants/icons";
 import { colors } from "@/constants/theme";
+import { posthog } from "@/lib/posthog";
 
 // Warm up the browser for OAuth on Android
 WebBrowser.maybeCompleteAuthSession();
@@ -81,7 +82,12 @@ export default function SignInScreen() {
                 const { error: finalizeError } = await signIn.finalize();
                 if (finalizeError) {
                     setErrors({ general: finalizeError.message || "Could not finalize sign in." });
+                    return;
                 }
+
+                posthog?.capture("sign_in_completed", {
+                    authentication_method: "password",
+                });
             } else {
                 setErrors({ general: `Sign in status: ${signIn.status}. Please check your credentials.` });
             }
@@ -92,6 +98,10 @@ export default function SignInScreen() {
                 clerkError.message ||
                 "Something went wrong. Please try again.";
             setErrors({ general: message });
+            posthog?.captureException(new Error("Password sign-in failed"), {
+                authentication_method: "password",
+                flow: "sign_in",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -104,6 +114,9 @@ export default function SignInScreen() {
         setErrors({});
 
         try {
+            posthog?.capture("google_sign_in_started", {
+                authentication_method: "google",
+            });
             await startSSOFlow({
                 strategy: "oauth_google",
             });
@@ -114,6 +127,10 @@ export default function SignInScreen() {
                 clerkError.message ||
                 "Could not sign in with Google. Please try again.";
             setErrors({ general: message });
+            posthog?.captureException(new Error("Google sign-in failed"), {
+                authentication_method: "google",
+                flow: "sign_in",
+            });
         } finally {
             setIsGoogleLoading(false);
         }
