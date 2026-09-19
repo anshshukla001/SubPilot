@@ -14,6 +14,7 @@ import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { PostHogProvider } from "posthog-react-native";
 import { posthog } from "@/lib/posthog";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -77,11 +78,13 @@ function InitialLayout() {
     }, [isSignedIn, isAuthLoaded, segments, router]);
 
     return (
-        <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="sso-callback" options={{ headerShown: false }} />
-        </Stack>
+        <SubscriptionProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="sso-callback" options={{ headerShown: false }} />
+            </Stack>
+        </SubscriptionProvider>
     );
 }
 
