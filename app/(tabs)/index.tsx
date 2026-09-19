@@ -1,24 +1,35 @@
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import dayjs from "dayjs";
+import { useUser } from "@clerk/expo";
 import { images } from "@/constants/images";
 import { icons } from "@/constants/icons";
 import { colors } from "@/constants/theme";
 import {
-    HOME_USER,
     HOME_BALANCE,
     UPCOMING_SUBSCRIPTIONS,
-    HOME_SUBSCRIPTIONS,
 } from "@/constants/data";
 import { formatCurrency } from "@/lib/utils";
 import { posthog } from "@/lib/posthog";
+import { useSubscriptions } from "@/context/SubscriptionContext";
 import ListHeading from "@/components/ListHeading";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 
 export default function Index() {
+    const { user } = useUser();
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
+    const { subscriptions, addSubscription } = useSubscriptions();
+    const [showCreateModal, setShowCreateModal] = useState(false);
+
+    const userName =
+        user?.fullName ||
+        user?.firstName ||
+        user?.username ||
+        user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+        "Subpilot User";
 
     const handleSubscriptionPress = (id: string) => {
         const isExpanded = expandedSubscriptionId !== id;
@@ -30,29 +41,54 @@ export default function Index() {
         });
     };
 
+    const handleCreateSubscription = (subscription: Subscription) => {
+        addSubscription(subscription);
+        posthog?.capture("subscription_created", {
+            subscription_name: subscription.name,
+            subscription_category: subscription.category ?? "Other",
+            subscription_frequency: subscription.frequency ?? "Monthly",
+        });
+    };
+
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, padding: 20 }}>
+            <CreateSubscriptionModal
+                visible={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onCreate={handleCreateSubscription}
+            />
+
             <FlatList
                 ListHeaderComponent={() => (
                     <>
                         <View className="home-header">
                             <View className="home-user">
-                                <Image
-                                    source={images.avatar}
-                                    className="home-avatar"
-                                />
+                                {user?.imageUrl ? (
+                                    <Image
+                                        source={{ uri: user.imageUrl }}
+                                        className="home-avatar"
+                                    />
+                                ) : (
+                                    <Image
+                                        source={images.avatar}
+                                        className="home-avatar"
+                                    />
+                                )}
                                 <Text className="home-user-name">
-                                    {HOME_USER.name}
+                                    {userName}
                                 </Text>
                             </View>
 
-                            <TouchableOpacity
-                                onPress={() => posthog?.capture("add_subscription_started", {
-                                    entry_point: "home_header",
-                                })}
+                            <Pressable
+                                onPress={() => {
+                                    setShowCreateModal(true);
+                                    posthog?.capture("add_subscription_started", {
+                                        entry_point: "home_header",
+                                    });
+                                }}
                             >
                                 <Image source={icons.add} className="home-add-icon" />
-                            </TouchableOpacity>
+                            </Pressable>
                         </View>
 
                         <View className="home-balance-card">
@@ -90,7 +126,7 @@ export default function Index() {
                         <ListHeading title="All Subscriptions" />
                     </>
                 )}
-                data={HOME_SUBSCRIPTIONS}
+                data={subscriptions}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <SubscriptionCard
